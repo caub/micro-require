@@ -1,4 +1,4 @@
-indicateLoaded(__dirname);
+indicateLoaded(__filename);
 
 console.assert(require('./ahoy-dep') === require('./ahoy-dep.json'));
 

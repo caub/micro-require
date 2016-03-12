@@ -1,3 +1,3 @@
-indicateLoaded(__dirname);
+indicateLoaded(__filename);
 
 require('burr');

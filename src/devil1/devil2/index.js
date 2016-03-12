@@ -1,4 +1,4 @@
-indicateLoaded(__dirname);
+indicateLoaded(__filename);
 
 require('lol');
 
