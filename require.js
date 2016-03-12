@@ -43,7 +43,7 @@
 		// path.resolve([from ...], to)
 		// posix version
 
-		exports.resolve = function() {
+		exports.resolve = memoize(function() {
 			var resolvedPath = '',
 			resolvedAbsolute = false;
 
@@ -70,7 +70,7 @@
 			}), !resolvedAbsolute).join('/');
 
 			return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
-		};
+		});
 
 		exports.extname = function(path) {
 			return splitPath(path)[3];
@@ -79,24 +79,54 @@
 		return exports;
 	})();
 
+	const fetchSync = memoize(function() {
+		let xhr = new XMLHttpRequest();
+		return function(path) {
+			xhr.open('GET', path, false);
+			xhr.send();
+			
+			let statusCode = String(xhr.status);
+
+			if (statusCode.startsWith('4') || statusCode.startsWith('5')) {
+				throw new Error(`Request for "${p}" failed with status "${statusCode}" (${xhr.statusText})`);
+			}
+
+			return {
+				responseText: xhr.responseText,
+				status: xhr.status,
+				statusText: xhr.statusText,
+				contentType: xhr.getResponseHeader('Content-Type'),
+				responseURL: xhr.responseURL
+			};
+		};
+	}());
+
+	setTimeout(function() {
+		fetchSync.__cache.clear();
+	}, 5000);
+
 	const requirablePaths = (function () {
 		function* requirablePaths(from, module) {
-			yield* relativeRequirablePaths(from, module);
-			for (let nodeModulePath of nodeModulePaths(from)) {
-				yield* relativeRequirablePaths(nodeModulePath, module);
+			if (module.startsWith('./') || module.startsWith('/') || module.startsWith('../')) {
+				yield* relativeRequirablePaths(from, module);
+			} else {
+				for (let nodeModulePath of nodeModulePaths(from)) {
+					yield* relativeRequirablePaths(nodeModulePath, module);
+				}
 			}
 		}
 		function* relativeRequirablePaths(from, module) {
 			let p = path.resolve(from, module);
-			yield p;
-			yield `${p}.js`;
-			yield `${p}.json`;
+			if (p.endsWith('.js') || p.endsWith('.json')) {
+				yield p;
+			} else {
+				yield `${p}.js`;
+				// yield `${p}.json`;
+			}
 			yield path.resolve(from, module, './index.js');
 			yield path.resolve(from, module, './index.json');
 			try {
-				let xhr = new XMLHttpRequest();
-				xhr.open('GET', path.resolve(_root, `./${path.resolve(from, module, './package.json')}`), false);
-				xhr.send();
+				let xhr = fetchSync(path.resolve(_root, `./${path.resolve(from, module, './package.json')}`));
 				let res = JSON.parse(xhr.responseText);
 				if (typeof res.main !== 'string') throw new TypeError('Field "main" of package.json is not a string');
 				yield path.resolve(from, module, res.main);
@@ -137,19 +167,9 @@
 	}
 
 	const fetchSource = memoize(function fetchSource(p) {
-		let xhr = new XMLHttpRequest();
-		xhr.open('GET', path.resolve(_root, `./${p}`), false);
-		xhr.send();
+		let xhr = fetchSync(path.resolve(_root, `./${p}`));
 
-		let statusCode = String(xhr.status);
-
-		if (statusCode.startsWith('4') || statusCode.startsWith('5')) {
-			throw new Error(`Request for "${p}" failed with status "${statusCode}" (${xhr.statusText})`);
-		}
-
-		let contentType, fileType, finalPath = xhr.responseURL, content = xhr.responseText;
-
-		contentType = xhr.getResponseHeader('Content-Type');
+		let contentType = xhr.contentType, fileType, finalPath = xhr.responseURL, content = xhr.responseText;
 
 		// try resolving fileType from contentType served by server
 		if (contentType) {
@@ -221,6 +241,43 @@
 		return source;
 	});
 
+	var process = process || {
+		cwd() { return _root; },
+		on() {},
+		abort() { window.stop(); },
+		arch: '',
+		argv: [],
+		chdir(val) { _root = val; },
+		config: {},
+		connected: false,
+		disconnect() {},
+		env: {},
+		execArgv: [],
+		execPath: window.location.pathname,
+		exit() { window.close(); },
+		exitCode: 0,
+		getegid() { return 0; },
+		geteuid() { return 0; },
+		getgid() { return 0; },
+		getgroups() { return []; },
+		getuid() { return 0; },
+		hrtime() { return Date.now(); },
+		initgroups() { return []; },
+		kill() {},
+		mainModule: {},
+		memoryUsage() { return {}; },
+		nextTick(fn) { setTimeout(fn, 0); },
+		pid: 0,
+		platform: navigator.userAgent,
+		release: {},
+		send: void 0,
+		setegid() {},
+		seteuid() {},
+		setgid() {},
+		setgroups() {},
+		setuid() {}
+	};
+
 	function realRequire(from, module, hooks, cache) {
 		if (module in cache) {
 			// probably an inbuilt module mapped with magic
@@ -258,12 +315,12 @@
 		Function(
 				'module', 'exports',
 				'require',
-				'__dirname', '__filename',
+				'__dirname', '__filename', 'process',
 				`${source.content}\n\n\/\/# sourceURL=${source.finalPath}`
 			)(
 				module, exports,
 				createLocalRequire(m__dirname),
-				m__dirname, source.requestPath
+				m__dirname, source.requestPath, process
 			);
 	}
 
