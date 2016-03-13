@@ -356,7 +356,6 @@
 	if (typeof process !== 'undefined' && typeof module !== 'undefined' && 'exports' in module) {
 		// probably in node or another require chamber
 		module.exports = rootRequire;
-		// TODO: assign all inbuilt modules to cache
 		for (let lib of require('repl')._builtinLibs) {
 			cache[lib] = {exports: require(lib)};
 		}
