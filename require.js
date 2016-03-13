@@ -95,8 +95,6 @@
 
 					return {
 						responseText: xhr.responseText,
-						status: xhr.status,
-						statusText: xhr.statusText,
 						contentType: xhr.getResponseHeader('Content-Type'),
 						responseURL: xhr.responseURL
 					};
@@ -107,18 +105,17 @@
 				const fs = require('fs');
 				const stdPath = require('path');
 				return function(path) {
-					let o = {};
-					debugger;
-					o.responseText = fs.readFileSync(`./${path}`, 'utf8'); // this would always throw if file is not found IIUC
-					o.responseURL = stdPath.resolve(path);
-					return o;
+					return {
+						responseText: fs.readFileSync(`${__dirname}/${path}`, 'utf8'), // this would always throw if file is not found IIUC
+						responseURL: stdPath.resolve(path)
+					};
 				};
 			}());
 		}
 	})();
 
 	setTimeout(function() {
-		fetchSync.__cache.clear();
+		fetchSync.__cache = {};
 	}, 5000);
 
 	const requirablePaths = (function () {
@@ -167,18 +164,17 @@
 	})();
 
 	function memoize(fn, hasher=JSON.stringify) {
-		const cache = new Map();
 		function memoized(...args) {
 			const key = hasher(args);
-			if (cache.has(key)) {
-				return cache.get(key);
+			if (key in memoized.__cache) {
+				return memoized.__cache[key];
 			} else {
 				const result = fn(...args);
-				cache.set(key, result);
+				memoized.__cache[key] = result;
 				return result;
 			}
 		}
-		memoized.__cache = cache;
+		memoized.__cache = Object.create(null);
 		return memoized;
 	}
 
@@ -361,6 +357,9 @@
 		// probably in node or another require chamber
 		module.exports = rootRequire;
 		// TODO: assign all inbuilt modules to cache
+		for (let lib of require('repl')._builtinLibs) {
+			cache[lib] = {exports: require(lib)};
+		}
 	} else if (typeof window !== 'undefined') {
 		let _previousRequire = window.require;
 		window.require = rootRequire;
