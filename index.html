@@ -2,6 +2,8 @@
 <script>
 require.setRoot('/src/');
 
+require.cache.react = {exports: require('./node_modules/react/dist/react.js')};
+
 (function () {
 	const babel = require('babel-standalone');
 	require.hooks.jsx = function(repr) {
