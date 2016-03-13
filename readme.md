@@ -1,3 +1,16 @@
+## micro-require
+
+this is an isomorphic commonjs implementation. it uses synchronous XHR in the browser, and `readFileSync` in node. it is only for development.
+it supports loading from node modules.
+
+in the browser, loading heavily distributed node modules like react and virtual-dom etc. could take a lot of time (specially in FireFox), so better to require their dist files instead.
+
+take a look at the `tests` folder and `index.html` to see how to set roots and add hooks etc.
+
+I use it as a lazily-loaded browserify, giving me a workflow with 0 build time lag. It obviously won't scale well for large and hefty projects.
+
+FF dev edition and Chrome Dev edition already support like most of the ES6, so I don't need any build at all in dev.
+
 ### how it works
 
 the flow of things along with caching is documented here for future me and anyone interested.
