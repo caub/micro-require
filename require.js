@@ -79,27 +79,43 @@
 		return exports;
 	})();
 
-	const fetchSync = memoize(function() {
-		let xhr = new XMLHttpRequest();
-		return function(path) {
-			xhr.open('GET', path, false);
-			xhr.send();
-			
-			let statusCode = String(xhr.status);
+	const fetchSync = (function() {
+		if (typeof window !== 'undefined' && 'XMLHttpRequest' in window) {
+			return memoize(function() {
+				let xhr = new XMLHttpRequest();
+				return function(path) {
+					xhr.open('GET', path, false);
+					xhr.send();
 
-			if (statusCode.startsWith('4') || statusCode.startsWith('5')) {
-				throw new Error(`Request for "${p}" failed with status "${statusCode}" (${xhr.statusText})`);
-			}
+					let statusCode = String(xhr.status);
 
-			return {
-				responseText: xhr.responseText,
-				status: xhr.status,
-				statusText: xhr.statusText,
-				contentType: xhr.getResponseHeader('Content-Type'),
-				responseURL: xhr.responseURL
-			};
-		};
-	}());
+					if (statusCode.startsWith('4') || statusCode.startsWith('5')) {
+						throw new Error(`Request for "${p}" failed with status "${statusCode}" (${xhr.statusText})`);
+					}
+
+					return {
+						responseText: xhr.responseText,
+						status: xhr.status,
+						statusText: xhr.statusText,
+						contentType: xhr.getResponseHeader('Content-Type'),
+						responseURL: xhr.responseURL
+					};
+				};
+			}());
+		} else if (typeof require === 'function') {
+			return memoize(function() {
+				const fs = require('fs');
+				const stdPath = require('path');
+				return function(path) {
+					let o = {};
+					debugger;
+					o.responseText = fs.readFileSync(`./${path}`, 'utf8'); // this would always throw if file is not found IIUC
+					o.responseURL = stdPath.resolve(path);
+					return o;
+				};
+			}());
+		}
+	})();
 
 	setTimeout(function() {
 		fetchSync.__cache.clear();
@@ -186,7 +202,7 @@
 
 		// if we didn't find any match from content type, fall back to file name
 		if (!fileType) {
-			fileType = path.extname(p);
+			fileType = path.extname(p).replace(/^\s*\./, '');
 		}
 
 		// if we still didn't get it, just default to js
@@ -236,47 +252,49 @@
 			}
 		}
 		if (!source) {
-			throw new Error('Operation HostResolveImportedModule failed to resolve the imported module!');
+			throw new Error(`Operation HostResolveImportedModule failed to resolve module "${module}" from "${from}"!`);
 		}
 		return source;
 	});
 
-	var process = process || {
-		cwd() { return _root; },
-		on() {},
-		abort() { window.stop(); },
-		arch: '',
-		argv: [],
-		chdir(val) { _root = val; },
-		config: {},
-		connected: false,
-		disconnect() {},
-		env: {},
-		execArgv: [],
-		execPath: window.location.pathname,
-		exit() { window.close(); },
-		exitCode: 0,
-		getegid() { return 0; },
-		geteuid() { return 0; },
-		getgid() { return 0; },
-		getgroups() { return []; },
-		getuid() { return 0; },
-		hrtime() { return Date.now(); },
-		initgroups() { return []; },
-		kill() {},
-		mainModule: {},
-		memoryUsage() { return {}; },
-		nextTick(fn) { setTimeout(fn, 0); },
-		pid: 0,
-		platform: navigator.userAgent,
-		release: {},
-		send: void 0,
-		setegid() {},
-		seteuid() {},
-		setgid() {},
-		setgroups() {},
-		setuid() {}
-	};
+	if (typeof window !== 'undefined') {
+		window.process = {
+			cwd() { return _root; },
+			on() {},
+			abort() { window.stop(); },
+			arch: '',
+			argv: [],
+			chdir(val) { _root = val; },
+			config: {},
+			connected: false,
+			disconnect() {},
+			env: {},
+			execArgv: [],
+			execPath: _root,
+			exit() { window.close(); },
+			exitCode: 0,
+			getegid() { return 0; },
+			geteuid() { return 0; },
+			getgid() { return 0; },
+			getgroups() { return []; },
+			getuid() { return 0; },
+			hrtime() { return Date.now(); },
+			initgroups() { return []; },
+			kill() {},
+			mainModule: {},
+			memoryUsage() { return {}; },
+			nextTick(fn) { setTimeout(fn, 0); },
+			pid: 0,
+			platform: 'browser',
+			release: {},
+			send: void 0,
+			setegid() {},
+			seteuid() {},
+			setgid() {},
+			setgroups() {},
+			setuid() {}
+		};
+	}
 
 	function realRequire(from, module, hooks, cache) {
 		if (module in cache) {
@@ -298,6 +316,9 @@
 			source
 		};
 
+		if (typeof hooks[source.fileType] !== 'function') {
+			throw new Error(`No hook available for fileType "${source.fileType}"`);
+		}
 		hooks[source.fileType](moduleRepresentation);
 		return MODULE_OBJECT;
 	}
