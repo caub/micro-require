@@ -1,5 +1,17 @@
 <script src="./require.js"></script>
 <script>
 require.setRoot('/src/');
+
+(function () {
+	const babel = require('babel-standalone');
+	require.hooks.jsx = function(repr) {
+		repr.source.content = `const React = require('react');
+		${babel.transform(repr.source.content, {presets:['react']}).code}`;
+		require.hooks.js(repr);
+	};
+})();
+
+
 require('./');
+
 </script>

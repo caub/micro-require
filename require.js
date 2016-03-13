@@ -130,7 +130,7 @@
 		}
 		function* relativeRequirablePaths(from, module) {
 			let p = path.resolve(from, module);
-			if (p.endsWith('.js') || p.endsWith('.json')) {
+			if (p.match(/\....?$/i)) {
 				yield p;
 			} else {
 				yield `${p}.js`;
