@@ -356,6 +356,7 @@
 	if (typeof process !== 'undefined' && typeof module !== 'undefined' && 'exports' in module) {
 		// probably in node or another require chamber
 		module.exports = rootRequire;
+		rootRequire.setRoot('./');
 		for (let lib of require('repl')._builtinLibs) {
 			cache[lib] = {exports: require(lib)};
 		}
