@@ -114,10 +114,6 @@
 		}
 	})();
 
-	setTimeout(function() {
-		fetchSync.__cache = {};
-	}, 5000);
-
 	const requirablePaths = (function () {
 		function* requirablePaths(from, module) {
 			if (module.startsWith('./') || module.startsWith('/') || module.startsWith('../')) {
@@ -339,6 +335,7 @@
 				createLocalRequire(m__dirname),
 				m__dirname, source.requestPath, process
 			);
+		source.content = ''; // deallocating this large ass string
 	}
 
 	function jsonModuleCompile({module, source}) {
@@ -369,4 +366,9 @@
 	} else {
 		throw new Error('I dunno where you are running this, but you seem to be lost');
 	}
+
+	process.nextTick(function() {
+		fetchSync.__cache = {};
+	});
+
 })();
