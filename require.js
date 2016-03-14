@@ -120,11 +120,11 @@
 				yield* relativeRequirablePaths(from, module);
 			} else {
 				for (let nodeModulePath of nodeModulePaths(from)) {
-					yield* relativeRequirablePaths(nodeModulePath, module);
+					yield* relativeRequirablePaths(nodeModulePath, module, true);
 				}
 			}
 		}
-		function* relativeRequirablePaths(from, module) {
+		function* relativeRequirablePaths(from, module, forceAll=false) {
 			let p = path.resolve(from, module);
 			let hasExt = Object.keys(hooks).some(function (key) {
 				return module.endsWith(`.${key}`);
@@ -135,13 +135,18 @@
 				yield `${p}.js`;
 				// yield `${p}.json`;
 			}
+			if (forceAll) {
+				yield `${p}.js`;
+			}
 			yield path.resolve(from, module, './index.js');
 			yield path.resolve(from, module, './index.json');
 			try {
 				let xhr = fetchSync(path.resolve(_root, `./${path.resolve(from, module, './package.json')}`));
 				let res = JSON.parse(xhr.responseText);
 				if (typeof res.main !== 'string') throw new TypeError('Field "main" of package.json is not a string');
-				yield path.resolve(from, module, res.main);
+				let resolved = path.resolve(from, module, res.main);
+				yield resolved;
+				yield `${resolved}.js`;
 			} catch (er) {}
 		}
 		function* nodeModulePaths(from) {
@@ -168,7 +173,7 @@
 			if (key in memoized.__cache) {
 				return memoized.__cache[key];
 			} else {
-				const result = fn(...args);
+				let result = fn(...args);
 				memoized.__cache[key] = result;
 				return result;
 			}
@@ -214,6 +219,12 @@
 		};
 	});
 
+	let IS_STRICT_MODE = false;
+	try {
+		eval('with(1){}');
+	} catch(er) {
+		IS_STRICT_MODE = true;
+	}
 	const hooks = {
 		js: jsModuleCompile,
 		json: jsonModuleCompile,
@@ -326,13 +337,14 @@
 
 	function jsModuleCompile({module, source}) {
 		const exports = {};
-		module.exports = {};
+		module.exports = exports;
 		const m__dirname = path.resolve(source.requestPath, '..');
+		const modeDirective = IS_STRICT_MODE ? '"use strict";\n' : '';
 		Function(
 				'module', 'exports',
 				'require',
 				'__dirname', '__filename', 'process',
-				`${source.content}\n\n\/\/# sourceURL=${source.finalPath}`
+				`${modeDirective}${source.content}\n\n\/\/# sourceURL=${source.finalPath}`
 			)(
 				module, exports,
 				createLocalRequire(m__dirname),
