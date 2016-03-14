@@ -106,7 +106,7 @@
 				const stdPath = require('path');
 				return function(path) {
 					return {
-						responseText: fs.readFileSync(`${__dirname}/${path}`, 'utf8'), // this would always throw if file is not found IIUC
+						responseText: fs.readFileSync(`./${path}`, 'utf8'), // this would always throw if file is not found IIUC
 						responseURL: stdPath.resolve(path)
 					};
 				};
