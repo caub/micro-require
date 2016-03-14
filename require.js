@@ -126,7 +126,10 @@
 		}
 		function* relativeRequirablePaths(from, module) {
 			let p = path.resolve(from, module);
-			if (p.endsWith('.js') || p.endsWith('.json') || p.endsWith('.jsx') || p.endsWith('.less') || p.endsWith('.css') || p.endsWith('.sass')) {
+			let hasExt = Object.keys(hooks).some(function (key) {
+				return module.endsWith(`.${key}`);
+			});
+			if (hasExt) {
 				yield p;
 			} else {
 				yield `${p}.js`;
