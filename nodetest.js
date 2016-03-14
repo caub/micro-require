@@ -14,11 +14,4 @@ req.cache.react = {exports: req('./node_modules/react/dist/react.js')};
 
 console.log(req('./'));
 
-console.time('native-react');
-require('react');
-console.timeEnd('native-react');
-console.time('native-vdom');
-require('virtual-dom');
-console.timeEnd('native-vdom');
-
 console.log(req('fs') === require('fs'));

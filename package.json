@@ -1,0 +1,19 @@
+{
+  "name": "micro-require",
+  "version": "1.0.0",
+  "description": "this is an isomorphic commonjs implementation. it uses synchronous XHR in the browser, and `readFileSync` in node. it is only for development. it supports loading from node modules.",
+  "main": "require.js",
+  "scripts": {
+    "test": "echo fuck you lol"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/awalGarg/micro-require.git"
+  },
+  "author": "Awal Garg",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/awalGarg/micro-require/issues"
+  },
+  "homepage": "https://github.com/awalGarg/micro-require#readme"
+}
