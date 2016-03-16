@@ -120,7 +120,7 @@
 				yield* relativeRequirablePaths(from, module);
 			} else {
 				for (let nodeModulePath of nodeModulePaths(from)) {
-					yield* relativeRequirablePaths(nodeModulePath, module, true);
+					yield* relativeRequirablePaths(nodeModulePath, module);
 				}
 			}
 		}
@@ -129,9 +129,10 @@
 			let hasExt = Object.keys(hooks).some(function (key) {
 				return module.endsWith(`.${key}`);
 			});
+			let isDir = !hasExt && module.endsWith('/');
 			if (hasExt) {
 				yield p;
-			} else {
+			} else if (!isDir) {
 				yield `${p}.js`;
 				// yield `${p}.json`;
 			}
