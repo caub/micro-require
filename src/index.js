@@ -1,4 +1,8 @@
-var global = typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : this);
+// var global = typeof global !== 'undefined' ? global : (typeof window !== 'undefined' ? window : this);
+
+if (typeof global === 'undefined') {
+	window.global = window;
+}
 
 global.indicateLoaded = function (file) {
 	console.log(`Module "${file}" was loaded at ${Date()}`);
